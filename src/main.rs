@@ -17,19 +17,25 @@ const FPS: u32 = 60;
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
-// TODO: This currently only supports the 'hh:mm:ss' format, but it'd be nice
-// if it could account for just "ss" or "mm:ss" based on the number of colons
-fn parse_timer(value: &String) -> f64 {
-    let error_message = "Invalid Timer: must be of format 'hh:mm:ss'";
+fn parse_timer(value: &String) -> Result<f64, String> {
+    let timer_string_split = value.split(':');
 
-    let (hours, rest) = value.split_once(':').expect(error_message);
-    let hours = hours.parse::<u32>().ok().expect(error_message);
+    if timer_string_split.clone().count() > 3 {
+        return Err(
+            "Invalid timer: countdown timer can only have 3 parts at most (hh:mm:ss)".to_string(),
+        );
+    }
 
-    let (minutes, seconds) = rest.split_once(':').expect(error_message);
-    let minutes = minutes.parse::<u32>().ok().expect(error_message);
-    let seconds = seconds.parse::<u32>().ok().expect(error_message);
-
-    ((hours * 60 * 60) + (minutes * 60) + seconds) as f64
+    // Walk the split time string backwards and add up the seconds.
+    // By doing this it's easier to convert the string into base
+    // 60 since we can mulitple the iteration value by 60 ^ i.
+    Ok(timer_string_split
+        .rev()
+        .enumerate()
+        .fold(0, |acc, (i, time_string)| {
+            let parsed_time_string = time_string.parse::<u32>().ok().unwrap();
+            acc + parsed_time_string * u32::pow(60, i as u32)
+        }) as f64)
 }
 
 fn main() -> Result<(), String> {
@@ -39,7 +45,7 @@ fn main() -> Result<(), String> {
         panic!("Invalid Argument: Time must be specified");
     }
 
-    let mut timer = parse_timer(&args[1]);
+    let mut timer = parse_timer(&args[1])?;
     let mut width: i32 = WIDTH as i32;
     let mut height: i32 = HEIGHT as i32;
 
@@ -165,4 +171,19 @@ fn main() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[test]
+fn it_should_parse_a_time_with_only_seconds() {
+    assert_eq!(10.0, parse_timer(&"10".to_string()).unwrap());
+}
+
+#[test]
+fn it_should_parse_a_time_with_minutes_and_seconds() {
+    assert_eq!(70.0, parse_timer(&"01:10".to_string()).unwrap());
+}
+
+#[test]
+fn it_should_parse_a_time_with_hours_minutes_and_seconds() {
+    assert_eq!(3670.0, parse_timer(&"01:01:10".to_string()).unwrap());
 }
