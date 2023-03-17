@@ -72,9 +72,15 @@ fn main() -> Result<(), String> {
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut blink_timer = 0.0;
     let mut paused = false;
+    let mut user_notified_finished_timer = false;
 
     'main_loop: loop {
         let active_timer = timer > 0.0;
+
+        if !active_timer && !user_notified_finished_timer {
+            canvas.window_mut().flash(sdl2::video::FlashOperation::UntilFocused)?;
+            user_notified_finished_timer = true;
+        }
 
         /****************************
          *** POLL EVENTS *************
