@@ -16,6 +16,31 @@ const NANOS_PER_SEC: u32 = 1_000_000_000;
 const FPS: u32 = 60;
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
+const VELOCITY_SPEED: i32 = 3;
+const TEXT_PADDING: f32 = 0.1;
+const TEXT_SIZE: f32 = 0.8;
+const DVD_FONT_SCALE: f32 = 0.25;
+
+#[derive(PartialEq)]
+enum DisplayMode {
+    Default,
+    DVD,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Velocity {
+    x: i32,
+    y: i32,
+}
+
+#[derive(Debug)]
+struct TimerDisplay {
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    velocity: Option<Velocity>,
+}
 
 fn parse_timer(value: &String) -> Result<f64, String> {
     let timer_string_split = value.split(':');
@@ -39,20 +64,40 @@ fn parse_timer(value: &String) -> Result<f64, String> {
 }
 
 fn main() -> Result<(), String> {
-    let args: Vec<String> = ::std::env::args().collect();
+    let mut args = ::std::env::args();
+    let mut timer: Option<f64> = None;
+    let mut display_mode = DisplayMode::Default;
 
-    if args.len() < 2 {
-        panic!("Invalid Argument: Time must be specified");
+    // Shift one to move off the executable name
+    args.next();
+
+    for arg in args {
+        match arg.as_str() {
+            "--dvd" => display_mode = DisplayMode::DVD,
+            _ => timer = Some(parse_timer(&arg)?),
+        }
     }
 
-    let mut timer = parse_timer(&args[1])?;
-    let mut width: i32 = WIDTH as i32;
-    let mut height: i32 = HEIGHT as i32;
+    if timer == None {
+        return Err("Missing timer".to_string());
+    }
+
+    // Redeclare the timer so we can just reference the value directly
+    let mut timer = timer.unwrap();
+    let mut timer_display = TimerDisplay { x: 0, y: 0, width: 0, height: 0, velocity: None };
+
+    // Add a velocity to the timer_display since it'll be bouncin' around the place
+    if display_mode == DisplayMode::DVD {
+        timer_display.velocity = Some(Velocity { x: VELOCITY_SPEED, y: VELOCITY_SPEED });
+    }
+
+    let mut window_width: i32 = WIDTH as i32;
+    let mut window_height: i32 = HEIGHT as i32;
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
     let window = video_subsystem
-        .window("timer", width as u32, height as u32)
+        .window("timer", window_width as u32, window_height as u32)
         .position_centered()
         .resizable()
         .build()
@@ -83,7 +128,7 @@ fn main() -> Result<(), String> {
         }
 
         /****************************
-         *** POLL EVENTS *************
+         *** POLL EVENTS ************
          ****************************/
 
         for event in event_pump.poll_iter() {
@@ -103,8 +148,8 @@ fn main() -> Result<(), String> {
                 }
                 Event::Window { win_event, .. } => {
                     if let WindowEvent::Resized(w, h) = win_event {
-                        width = w;
-                        height = h;
+                        window_width = w;
+                        window_height = h;
                     }
                 }
                 _ => {}
@@ -150,26 +195,48 @@ fn main() -> Result<(), String> {
         canvas.set_draw_color(background_color);
         canvas.clear();
 
+        match display_mode {
+            DisplayMode::DVD => {
+                timer_display.x = timer_display.x + timer_display.velocity.unwrap().x;
+                timer_display.y = timer_display.y + timer_display.velocity.unwrap().y;
+                timer_display.width = (window_width as f32 * DVD_FONT_SCALE) as u32;
+                timer_display.height = (window_height as f32 * DVD_FONT_SCALE) as u32;
+
+                if timer_display.x <= 0 {
+                    timer_display.velocity.as_mut().unwrap().x = VELOCITY_SPEED;
+                }
+
+                if (timer_display.x + timer_display.width as i32) >= window_width {
+                    timer_display.velocity.as_mut().unwrap().x = -VELOCITY_SPEED;
+                }
+
+                if timer_display.y <= 0 {
+                    timer_display.velocity.as_mut().unwrap().y = VELOCITY_SPEED;
+                }
+
+                if (timer_display.y + timer_display.height as i32) >= window_height {
+                    timer_display.velocity.as_mut().unwrap().y = -VELOCITY_SPEED;
+                }
+            }
+            DisplayMode::Default => {
+                    // Calculate the time display based on the window width and
+                    // height. We run this every frame just in case the user
+                    // has resized the window which changes the font size.
+                    timer_display.x = (window_width as f32 * TEXT_PADDING) as i32;
+                    timer_display.y = (window_height as f32 * TEXT_PADDING) as i32;
+                    timer_display.width = (window_width as f32 * TEXT_SIZE) as u32;
+                    timer_display.height = (window_height as f32 * TEXT_SIZE) as u32;
+                }
+        }
+
         // Once `active_timer` is false, we flash the completed
         // timer on the screen every half second; so we need
         // to set `flash_timer` every half second for it.
         let flash_timer = (blink_timer % 1.0) < 0.5;
 
         if active_timer || flash_timer {
-            const PADDING: f32 = 0.1;
-            const TEXT_SIZE: f32 = 0.8;
-
             canvas
-                .copy(
-                    &texture,
-                    None,
-                    Rect::new(
-                        (width as f32 * PADDING) as i32,
-                        (height as f32 * PADDING) as i32,
-                        (width as f32 * TEXT_SIZE) as u32,
-                        (height as f32 * TEXT_SIZE) as u32,
-                    ),
-                )
+                .copy(&texture, None, Rect::new(timer_display.x, timer_display.y, timer_display.width, timer_display.height))
                 .expect("Error writing texture");
         }
 
