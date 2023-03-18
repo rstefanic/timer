@@ -114,7 +114,7 @@ fn main() -> Result<(), String> {
 
     let font_bytes = include_bytes!("../assets/Roboto-Regular.ttf");
     let ttf_handler = ttf::init().unwrap();
-    let font = ttf_handler.load_font_from_rwops(RWops::from_bytes(font_bytes).unwrap(), 128)?;
+    let font = ttf_handler.load_font_from_rwops(RWops::from_bytes(font_bytes).unwrap(), 512)?;
 
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
     let texture_creator = canvas.texture_creator();
