@@ -84,11 +84,20 @@ fn main() -> Result<(), String> {
 
     // Redeclare the timer so we can just reference the value directly
     let mut timer = timer.unwrap();
-    let mut timer_display = TimerDisplay { x: 0, y: 0, width: 0, height: 0, velocity: None };
+    let mut timer_display = TimerDisplay {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        velocity: None,
+    };
 
     // Add a velocity to the timer_display since it'll be bouncin' around the place
     if display_mode == DisplayMode::DVD {
-        timer_display.velocity = Some(Velocity { x: VELOCITY_SPEED, y: VELOCITY_SPEED });
+        timer_display.velocity = Some(Velocity {
+            x: VELOCITY_SPEED,
+            y: VELOCITY_SPEED,
+        });
     }
 
     let mut window_width: i32 = WIDTH as i32;
@@ -123,7 +132,9 @@ fn main() -> Result<(), String> {
         let active_timer = timer > 0.0;
 
         if !active_timer && !user_notified_finished_timer {
-            canvas.window_mut().flash(sdl2::video::FlashOperation::UntilFocused)?;
+            canvas
+                .window_mut()
+                .flash(sdl2::video::FlashOperation::UntilFocused)?;
             user_notified_finished_timer = true;
         }
 
@@ -219,14 +230,14 @@ fn main() -> Result<(), String> {
                 }
             }
             DisplayMode::Default => {
-                    // Calculate the time display based on the window width and
-                    // height. We run this every frame just in case the user
-                    // has resized the window which changes the font size.
-                    timer_display.x = (window_width as f32 * TEXT_PADDING) as i32;
-                    timer_display.y = (window_height as f32 * TEXT_PADDING) as i32;
-                    timer_display.width = (window_width as f32 * TEXT_SIZE) as u32;
-                    timer_display.height = (window_height as f32 * TEXT_SIZE) as u32;
-                }
+                // Calculate the time display based on the window width and
+                // height. We run this every frame just in case the user
+                // has resized the window which changes the font size.
+                timer_display.x = (window_width as f32 * TEXT_PADDING) as i32;
+                timer_display.y = (window_height as f32 * TEXT_PADDING) as i32;
+                timer_display.width = (window_width as f32 * TEXT_SIZE) as u32;
+                timer_display.height = (window_height as f32 * TEXT_SIZE) as u32;
+            }
         }
 
         // Once `active_timer` is false, we flash the completed
@@ -236,7 +247,16 @@ fn main() -> Result<(), String> {
 
         if active_timer || flash_timer {
             canvas
-                .copy(&texture, None, Rect::new(timer_display.x, timer_display.y, timer_display.width, timer_display.height))
+                .copy(
+                    &texture,
+                    None,
+                    Rect::new(
+                        timer_display.x,
+                        timer_display.y,
+                        timer_display.width,
+                        timer_display.height,
+                    ),
+                )
                 .expect("Error writing texture");
         }
 
