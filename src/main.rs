@@ -221,11 +221,29 @@ fn main() -> Result<(), String> {
                     timer_display.velocity.as_mut().unwrap().x = -VELOCITY_SPEED;
                 }
 
-                if timer_display.y <= 0 {
+                // The font has some padding above it. To make the timer properly hit the top of
+                // the window by ignoring the padding, we need to calculate the space between
+                // the font ascent and the font's top. This will give us the padding value.
+                let font_padding_above_ascent_percentage =
+                    (font.height() - font.ascent()) as f32 / font.height() as f32;
+                let padding =
+                    ((timer_display.height as f32) * font_padding_above_ascent_percentage) as i32;
+                if (timer_display.y + padding) <= 0 {
                     timer_display.velocity.as_mut().unwrap().y = VELOCITY_SPEED;
                 }
 
-                if (timer_display.y + timer_display.height as i32) >= window_height {
+                // There is also some padding under the font's baseline which makes the bounce
+                // occur earlier than it should. Here we'll take the baseline and add it to
+                // `y` on the timer_display to find where the true bottom of the text is.
+                //
+                // NOTE: If we were to ever add characters that go below
+                // baseline, then the bounce effect would break since
+                // we're calcluating the bounce from the baseline.
+                let font_height_from_baseline_percentage =
+                    (font.height() + font.descent()) as f32 / font.height() as f32;
+                let true_height =
+                    ((timer_display.height as f32) * font_height_from_baseline_percentage) as i32;
+                if (timer_display.y + true_height) >= window_height {
                     timer_display.velocity.as_mut().unwrap().y = -VELOCITY_SPEED;
                 }
             }
