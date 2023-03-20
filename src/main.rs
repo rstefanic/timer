@@ -1,5 +1,12 @@
 extern crate sdl2;
 
+#[cfg(all(unix, not(target_os = "macos")))]
+use dbus::{
+    arg::messageitem::{MessageItem, MessageItemArray},
+    ffidisp::Connection,
+    Message,
+};
+
 use sdl2::{
     event::{Event, WindowEvent},
     keyboard::Keycode,
@@ -136,6 +143,47 @@ fn main() -> Result<(), String> {
                 .window_mut()
                 .flash(sdl2::video::FlashOperation::UntilFocused)?;
             user_notified_finished_timer = true;
+
+            // For XDG desktops (besides macOS), we can use D-Bus to send a
+            // Desktop notification and let the user know that the timer
+            // has finished. This code should be moved into a module.
+            if cfg!(all(unix, not(target_os = "macos"))) {
+                let connection = Connection::get_private(dbus::ffidisp::BusType::Session)
+                    .map_err(|e| e.to_string())?;
+
+                let mut message = Message::new_method_call(
+                    "org.freedesktop.Notifications",
+                    "/org/freedesktop/Notifications",
+                    "org.freedesktop.Notifications",
+                    "Notify",
+                )?;
+
+                let program_name = "timer";
+                let id: u32 = 0;
+                let icon = "";
+                let summary = "Timer";
+                let body = "Time's up!";
+                let actions =
+                    MessageItem::Array(MessageItemArray::new(vec![], "as".into()).unwrap());
+                let hints =
+                    MessageItem::Array(MessageItemArray::new(vec![], "a{sv}".into()).unwrap());
+                let timeout = 5000;
+
+                message.append_items(&[
+                    program_name.clone().into(),
+                    id.into(),
+                    icon.into(),
+                    summary.into(),
+                    body.into(),
+                    actions,
+                    hints,
+                    timeout.into(),
+                ]);
+
+                connection
+                    .send(message)
+                    .map_err(|_| String::from("Could not send Desktop Notification Message"))?;
+            }
         }
 
         /****************************
