@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 sdl2 = { git = "https://github.com/Rust-SDL2/rust-sdl2", branch = "master", features = ["ttf"]}
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+dbus = "0.9.7"
