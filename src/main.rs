@@ -147,7 +147,7 @@ fn main() -> Result<(), String> {
             // For XDG desktops (besides macOS), we can use D-Bus to send a
             // Desktop notification and let the user know that the timer
             // has finished. This code should be moved into a module.
-            if cfg!(all(unix, not(target_os = "macos"))) {
+            #[cfg(all(unix, not(target_os = "macos")))] {
                 let connection = Connection::get_private(dbus::ffidisp::BusType::Session)
                     .map_err(|e| e.to_string())?;
 
