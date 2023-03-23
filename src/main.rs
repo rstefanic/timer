@@ -147,7 +147,8 @@ fn main() -> Result<(), String> {
             // For XDG desktops (besides macOS), we can use D-Bus to send a
             // Desktop notification and let the user know that the timer
             // has finished. This code should be moved into a module.
-            #[cfg(all(unix, not(target_os = "macos")))] {
+            #[cfg(all(unix, not(target_os = "macos")))]
+            {
                 let connection = Connection::get_private(dbus::ffidisp::BusType::Session)
                     .map_err(|e| e.to_string())?;
 
@@ -183,6 +184,18 @@ fn main() -> Result<(), String> {
                 connection
                     .send(message)
                     .map_err(|_| String::from("Could not send Desktop Notification Message"))?;
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                let bundle = mac_notification_sys::get_bundle_identifier_or_default("iterm");
+                mac_notification_sys::set_application(&bundle).unwrap();
+                let _ = mac_notification_sys::Notification::new()
+                    .title("Timer")
+                    .message("Time's up!")
+                    .sound("Ping")
+                    .send()
+                    .unwrap();
             }
         }
 

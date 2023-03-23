@@ -10,3 +10,6 @@ sdl2 = { git = "https://github.com/Rust-SDL2/rust-sdl2", branch = "master", feat
 
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 dbus = "0.9.7"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+mac-notification-sys = "0.5"
