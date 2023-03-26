@@ -21,6 +21,7 @@ use std::time::Duration;
 
 const NANOS_PER_SEC: u32 = 1_000_000_000;
 const FPS: u32 = 60;
+const TIME_DELTA: f64 = 1.0 / (FPS as f64);
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 const VELOCITY_SPEED: i32 = 3;
@@ -236,9 +237,9 @@ fn main() -> Result<(), String> {
         thread::sleep(Duration::new(0, sleep_time));
 
         if active_timer && !paused {
-            timer -= 1f64 / (FPS as f64);
+            timer -= TIME_DELTA;
         } else if !active_timer {
-            blink_timer += 1f64 / (FPS as f64);
+            blink_timer += TIME_DELTA;
         }
 
         /****************************
