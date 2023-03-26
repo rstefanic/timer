@@ -16,10 +16,8 @@ use sdl2::{
     ttf,
 };
 
-use std::thread;
-use std::time::Duration;
+use std::time::Instant;
 
-const NANOS_PER_SEC: u32 = 1_000_000_000;
 const FPS: u32 = 60;
 const TIME_DELTA: f64 = 1.0 / (FPS as f64);
 const WIDTH: u32 = 800;
@@ -112,6 +110,7 @@ fn main() -> Result<(), String> {
     let mut window_height: i32 = HEIGHT as i32;
 
     let sdl_context = sdl2::init()?;
+    let timer_subsystem = sdl_context.timer()?;
     let video_subsystem = sdl_context.video()?;
     let window = video_subsystem
         .window("timer", window_width as u32, window_height as u32)
@@ -138,6 +137,7 @@ fn main() -> Result<(), String> {
 
     'main_loop: loop {
         let active_timer = timer > 0.0;
+        let current_cycle_timer = Instant::now();
 
         if !active_timer && !user_notified_finished_timer {
             canvas
@@ -232,9 +232,6 @@ fn main() -> Result<(), String> {
         /****************************
          *** UPDATE TIMER ************
          ****************************/
-
-        let sleep_time = NANOS_PER_SEC / FPS;
-        thread::sleep(Duration::new(0, sleep_time));
 
         if active_timer && !paused {
             timer -= TIME_DELTA;
@@ -341,6 +338,15 @@ fn main() -> Result<(), String> {
         }
 
         canvas.present();
+
+        // Sleep if the cycle took less than a 1/60th of a second to complete.
+        // If the cycle was longer than that, then the clock's off. The fix
+        // here requires decoupling the timer from the program execution.
+        const TIME_DELTA_AS_MILLIS: u32 = (TIME_DELTA * 1000.0) as u32;
+        let current_cycle_length = current_cycle_timer.elapsed().subsec_millis();
+        if current_cycle_length < TIME_DELTA_AS_MILLIS {
+            timer_subsystem.delay(TIME_DELTA_AS_MILLIS - current_cycle_length);
+        }
     }
 
     Ok(())
