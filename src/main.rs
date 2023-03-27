@@ -48,6 +48,12 @@ struct TimerDisplay {
     velocity: Option<Velocity>,
 }
 
+#[derive(PartialEq)]
+enum TimerMode {
+    Default,
+    Stopwatch,
+}
+
 fn parse_timer(value: &String) -> Result<f64, String> {
     let timer_string_split = value.split(':');
 
@@ -73,23 +79,33 @@ fn main() -> Result<(), String> {
     let mut args = ::std::env::args();
     let mut timer: Option<f64> = None;
     let mut display_mode = DisplayMode::Default;
+    let mut timer_mode = TimerMode::Default;
 
     // Shift one to move off the executable name
     args.next();
 
     for arg in args {
         match arg.as_str() {
+            "--stopwatch" => timer_mode = TimerMode::Stopwatch,
             "--dvd" => display_mode = DisplayMode::DVD,
             _ => timer = Some(parse_timer(&arg)?),
         }
     }
 
-    if timer == None {
-        return Err("Missing timer".to_string());
-    }
+    // Redeclare the timer so we can just reference the value directly.
+    let mut timer = match timer_mode {
+        TimerMode::Default => {
+            if timer == None {
+                return Err("Missing timer".to_string());
+            }
 
-    // Redeclare the timer so we can just reference the value directly
-    let mut timer = timer.unwrap();
+            timer.unwrap()
+        },
+        TimerMode::Stopwatch => {
+            0.0f64
+        },
+    };
+
     let mut timer_display = TimerDisplay {
         x: 0,
         y: 0,
@@ -136,9 +152,10 @@ fn main() -> Result<(), String> {
     let mut user_notified_finished_timer = false;
 
     'main_loop: loop {
-        let active_timer = timer > 0.0;
         let current_cycle_timer = Instant::now();
 
+        // The timer is always considered active in Stopwatch mode.
+        let active_timer = timer > 0.0 || TimerMode::Stopwatch == timer_mode;
         if !active_timer && !user_notified_finished_timer {
             canvas
                 .window_mut()
@@ -234,7 +251,10 @@ fn main() -> Result<(), String> {
          ****************************/
 
         if active_timer && !paused {
-            timer -= TIME_DELTA;
+            match timer_mode {
+                TimerMode::Default => timer -= TIME_DELTA,
+                TimerMode::Stopwatch => timer += TIME_DELTA,
+            }
         } else if !active_timer {
             blink_timer += TIME_DELTA;
         }
