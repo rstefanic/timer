@@ -18,8 +18,6 @@ use sdl2::{
 
 use std::time::Instant;
 
-const FPS: u32 = 60;
-const TIME_DELTA: f64 = 1.0 / (FPS as f64);
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 const VELOCITY_SPEED: i32 = 3;
@@ -126,7 +124,6 @@ fn main() -> Result<(), String> {
     let mut window_height: i32 = HEIGHT as i32;
 
     let sdl_context = sdl2::init()?;
-    let timer_subsystem = sdl_context.timer()?;
     let video_subsystem = sdl_context.video()?;
     let window = video_subsystem
         .window("timer", window_width as u32, window_height as u32)
@@ -147,13 +144,12 @@ fn main() -> Result<(), String> {
     canvas.present();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
+    let mut current_time = Instant::now();
     let mut blink_timer = 0.0;
     let mut paused = false;
     let mut user_notified_finished_timer = false;
 
     'main_loop: loop {
-        let current_cycle_timer = Instant::now();
-
         // The timer is always considered active in Stopwatch mode.
         let active_timer = timer > 0.0 || TimerMode::Stopwatch == timer_mode;
         if !active_timer && !user_notified_finished_timer {
@@ -244,19 +240,6 @@ fn main() -> Result<(), String> {
                 }
                 _ => {}
             }
-        }
-
-        /****************************
-         *** UPDATE TIMER ************
-         ****************************/
-
-        if active_timer && !paused {
-            match timer_mode {
-                TimerMode::Default => timer -= TIME_DELTA,
-                TimerMode::Stopwatch => timer += TIME_DELTA,
-            }
-        } else if !active_timer {
-            blink_timer += TIME_DELTA;
         }
 
         /****************************
@@ -359,13 +342,22 @@ fn main() -> Result<(), String> {
 
         canvas.present();
 
-        // Sleep if the cycle took less than a 1/60th of a second to complete.
-        // If the cycle was longer than that, then the clock's off. The fix
-        // here requires decoupling the timer from the program execution.
-        const TIME_DELTA_AS_MILLIS: u32 = (TIME_DELTA * 1000.0) as u32;
-        let current_cycle_length = current_cycle_timer.elapsed().subsec_millis();
-        if current_cycle_length < TIME_DELTA_AS_MILLIS {
-            timer_subsystem.delay(TIME_DELTA_AS_MILLIS - current_cycle_length);
+        /****************************
+         *** UPDATE TIMER ************
+         ****************************/
+
+        let new_time = Instant::now();
+        let frame_time = new_time - current_time;
+        current_time = new_time;
+        let dt = frame_time.as_secs_f64();
+
+        if active_timer && !paused {
+            match timer_mode {
+                TimerMode::Default => timer -= dt,
+                TimerMode::Stopwatch => timer += dt,
+            }
+        } else if !active_timer {
+            blink_timer += dt;
         }
     }
 
