@@ -20,7 +20,7 @@ use std::time::Instant;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
-const VELOCITY_SPEED: i32 = 3;
+const VELOCITY_SPEED: i32 = 1;
 const TEXT_PADDING: f32 = 0.1;
 const TEXT_SIZE: f32 = 0.8;
 const DVD_FONT_SCALE: f32 = 0.25;
