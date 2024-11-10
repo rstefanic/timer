@@ -52,10 +52,26 @@ enum TimerMode {
     Stopwatch,
 }
 
+const USAGE: &str = r#"
+Usage: timer [options] [timer]
+
+Start a timer that counts down to the time specified. Press the <space> key to pause it.
+
+Timer:
+    hh:mm:ss        The format of the countdown timer
+                    (e.g. "10" is ten seconds, "1:30" is a minute and thirty seconds, etc.)
+
+Options:
+    --stopwatch     Start a timer that increments rather than counts down to a specified time
+                    This option does not require the "timer" argument.
+    --dvd           Have the timer bounce around the screen like a DVD screen saver
+"#;
+
 fn parse_timer(value: &String) -> Result<f64, String> {
     let timer_string_split = value.split(':');
 
     if timer_string_split.clone().count() > 3 {
+        println!("{}", USAGE);
         return Err(
             "Invalid timer: countdown timer can only have 3 parts at most (hh:mm:ss)".to_string(),
         );
@@ -94,6 +110,7 @@ fn main() -> Result<(), String> {
     let mut timer = match timer_mode {
         TimerMode::Default => {
             if timer == None {
+                println!("{}", USAGE);
                 return Err("Missing timer".to_string());
             }
 
